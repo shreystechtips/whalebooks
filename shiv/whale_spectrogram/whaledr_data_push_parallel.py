@@ -1,5 +1,7 @@
 """
 Script to generate and upload spectogram for whale calls from OOI website.
+  - Be sure to modify the source data URL; see bottom of this script for details
+  - Be sure to examine the node pool code and modify as appropriate; again at bottom of this file (__main__)
 """
 import math as M
 import numpy as np
@@ -21,7 +23,7 @@ from multiprocessing import Pool
 import json
 import gc
 
-logging.basicConfig(filename='whaledr_data_upload.log', level=logging.INFO)
+logging.basicConfig(filename='whaledr_data_upload.log', level=logging.INFO, filemode="w")
 
 
 bucket_name = 'whaledr'
@@ -106,12 +108,12 @@ def data_push(data_url):
                 pingindex = np.argmax(stream[0].data[int(stratpoint * samp_rate):int((stratpoint + 1) * samp_rate)])
                 pingtimes[stratpoint] = (t_start + stratpoint + pingindex * stream[0].stats.delta)
             # Filter Data+Plot Spectrogram+Save Image and Audio
-            step_size = 5  # for calculating the rms pressure and ploting the spectrogtam
-            wlen = 0.056  # bin size in sec
+            step_size = 10                                # calc rms pressure and plotting spectrogram
+            wlen = 0.056                                  # bin size in sec
             nfft = int(_nearest_pow_2(wlen * samp_rate))  # number of fft points of each bin
-            per_lap = 0.995      # percentage of overlap
-            nlap = int(nfft * float(per_lap))   # number of overlapped samples
-            timestep = 5  # save results every 5 seceonds (no overlap)
+            per_lap = 0.995                               # percentage of overlap
+            nlap = int(nfft * float(per_lap))             # number of overlapped samples
+            timestep = 10                                 # save results every <this many> seceonds (no overlap)
 
             for i in range(0, len(pingtimes), timestep):
                 st = stream.slice(UTCDateTime(pingtimes[i]), UTCDateTime(pingtimes[i]) + step_size)
@@ -141,49 +143,68 @@ def data_push(data_url):
                 # Save spectrogram
                 fig = plt.figure(frameon=False, figsize=(8, 8))
                 ax = plt.Axes(fig, [0., 0., 1., 1.])
-                ax.set_axis_off()
+#                 ax.set_axis_off()
                 fig.add_axes(ax)
-                cax = ax.imshow(specgram, interpolation="nearest", extent=extent, norm=norm,
-                    cmap='viridis')
+                freq_ticks = [0, 4, 8]
+                time_ticks = [0, 5, 10]
+
+                cax = ax.imshow(specgram, interpolation="nearest", extent=extent, norm=norm, cmap='bone')
                 dpi = fig.get_dpi()
                 fig.set_size_inches(512/float(dpi), 512/float(dpi))
-                ax.axis('tight')
                 ax.set_xlim(0, end)
-                ax.set_ylim(0, 11)
+                ax.set_ylim(0.0, 8.)
                 ax.grid(False)
                 ax.set_xlabel('Time [s]')
                 ax.set_ylabel('Frequency [kHz]')
-                filename = st[0].stats.network+'_'+st[0].stats.station+'_'+st[0].stats.location+'_'+st[0].stats.channel+'_'+str(UTCDateTime(pingtimes[i])).replace("-", "_").replace(
-        ":", "_")
-                plt.savefig(filename[:-8] + '.jpg')
-                client.upload_file(filename[:-8] + '.jpg', bucket_name ,'{}/{}/{}/'.format(folder_name, hydrophone_name, url_date) +filename[:-8] + '.jpg')
+                ax.set_xticks(time_ticks)
+                ax.set_yticks(freq_ticks)
+
+                filename = st[0].stats.network+'_' + \
+                           st[0].stats.station+'_' + \
+                           st[0].stats.location+'_' + \
+                           st[0].stats.channel+'_' + \
+                           str(UTCDateTime(pingtimes[i])).replace("-", "_").replace(":", "_")
+
+                plt.savefig(filename[:-8] + '.jpg', bbox_inches='tight')
+                client.upload_file(filename[:-8] + '.jpg', 
+                                   bucket_name,
+                                   '{}/{}/{}/'.format(folder_name, hydrophone_name, url_date) + \
+                                       filename[:-8] + '.jpg')
                 os.remove(filename[:-8] + '.jpg')
+                print(filename)
                 plt.cla()
                 plt.clf()
                 plt.close('all')
 
                 # save audio
                 Save2Wav(st[0], filename, samp_rate)
-                client.upload_file(filename[:-8] + '.wav', bucket_name, '{}/{}/{}/'.format( folder_name, hydrophone_name, url_date) + filename[:-8] + '.wav')
+                client.upload_file(filename[:-8] + '.wav', 
+                                   bucket_name, 
+                                   '{}/{}/{}/'.format( folder_name, hydrophone_name, url_date) + 
+                                       filename[:-8] + '.wav')
                 os.remove(filename[:-8] + '.wav')
                 # delete large objects to release memory.
                 del trace, st[0]
                 gc.collect()
+
         else:
             logging.info("Skipped Url: %s", data_url)
+
     # check for unwanted URL format.
     except Exception as err:
         logging.info('Url with error: %s is %s', err, data_url)
 
-def push_manifest():
+def push_manifest(creds_data, folder_name, manifest_delimiter, manifest_file, bucket_name):
     """
         Utility function to push updated manifest json data.
     """
-    s3_bucket = boto3.resource('s3',aws_access_key_id=creds_data['key_id'],
-         aws_secret_access_key=creds_data['key_access'])
+    s3_bucket = boto3.resource('s3',
+                               aws_access_key_id = creds_data['key_id'],
+                               aws_secret_access_key = creds_data['key_access'])
 
-    client = boto3.client('s3',aws_access_key_id=creds_data['key_id'],
-             aws_secret_access_key=creds_data['key_access'])
+    client = boto3.client('s3',
+                          aws_access_key_id=creds_data['key_id'],
+                          aws_secret_access_key=creds_data['key_access'])
 
     bucket = s3_bucket.Bucket(bucket_name)
     files = []
@@ -195,19 +216,34 @@ def push_manifest():
     with open('data.json', 'w') as outfile:
         json.dump(files, outfile)
     client.upload_file('data.json', bucket_name, folder_name + manifest_file, ExtraArgs={'ACL':'public-read'})
+    print(len(files))
     os.remove('data.json')
 
 if __name__ == '__main__':
+    
+    # temp kluge
+    creds_data = load_creds() 
+    push_manifest(creds_data, folder_name, manifest_delimiter, manifest_file, bucket_name)
     start_time = time.time()
-    # provide the URL for the day to extract data for.
-    mainurl = 'https://rawdata.oceanobservatories.org/files/CE04OSBP/LJ01C/11-HYDBBA105/2019/01/12/'
+    
+    # provide the correct source URL including year/month/day from:
+    #   Oregon Shelf Benthic Cabled Experiment Package, 80 m: CE02SHBP/LJ01D/11-HYDBBA106/yyyy/mm/dd/
+    #   Endurance Offshore (distal continental shelf), 500 m: CE04OSBP/LJ01C/11-HYDBBA105/yyyy/mm/dd/
+    #   Oregon Slope Base sea floor, 2900 m:                  RS01SLBS/LJ01A/09-HYDBBA102/yyyy/mm/dd/
+    #   Oregon Slope Base shallow profiler mooring, 200 m:    RS01SBPS/PC01A/08-HYDBBA103/yyyy/mm/dd/
+    #   Axial Base Seafloor; 2600 m:                          RS03AXBS/LJ03A/09-HYDBBA302/yyyy/mm/dd/
+    #   Axial Base shallow profiler mooring, 200 m:           RS03AXPS/PC03A/08-HYDBBA303/yyyy/mm/dd/
+    mainurl = 'https://rawdata.oceanobservatories.org/files/CE04OSBP/LJ01C/11-HYDBBA105/2019/01/14/'
+    
     url_list = get_data_url_list(mainurl)
     try:
-        process = 12
-        process = multiprocessing.cpu_count() if process > multiprocessing.cpu_count() else process
-        pool = Pool(process)
-
-        pool.map(data_push, url_list, chunksize = len(url_list)//process)  # process data_inputs iterable with pool
+        nCores = 12
+        
+        # double-check the number of cores: Make sure it does not exceed what is available
+        nCores = multiprocessing.cpu_count() if nCores > multiprocessing.cpu_count() else nCores
+        
+        pool = Pool(nCores)
+        pool.map(data_push, url_list, chunksize = len(url_list)//nCores)  # process data_inputs iterable with pool
     finally:
         pool.close()
         pool.join()

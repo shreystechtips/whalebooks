@@ -4,6 +4,7 @@
 
 
 - [Introduction](https://github.com/whaledr/whalebooks/blob/master/shiv/whale_spectrogram/README.md#introduction)
+- [Pay Serious Attention](https://github.com/whaledr/whalebooks/blob/master/shiv/whale_spectrogram/README.md#pay_serious_attention)
 - [Overviews: Low-res and Medium-res walk-throughs](https://github.com/whaledr/whalebooks/blob/master/shiv/whale_spectrogram/README.md#overviews)
 - [High-res walkthrough](https://github.com/whaledr/whalebooks/blob/master/shiv/whale_spectrogram/README.md#walkthrough)
 - [Using **Screen**](https://github.com/whaledr/whalebooks/blob/master/shiv/whale_spectrogram/README.md#screen)
@@ -29,22 +30,72 @@ to speed up the task.
 
 ### Hydrophones
 
-- 80 meter site on LJ01D
-- Endurance 500 meter site LJ01C
-- Oregon Slope Base profiler, seafloor, about 2900 meters LJ01A
-- 200 meter *platform* for the Oregon Slope Base Shallow Profiler PC01A
-- Axial Base seafloor for profiler LJ03A
-- Axial shallow profiler 200 meter platform (offline since last summer) PC03A
+In the OOI Regional Cabled Observatory program we are familiar with six broadband hydrophones capable of recording
+ambient acoustics at 40khz (and higher) sampling rates. These are the microphones that pick up humpback whale calls; 
+as well as sounds made by other sorts of whales, boat engine noise, mechanical sounds (moorings rattling for example), 
+and surface wind/wave action noise. 
+
+
+Hydrophone data is archived at a 
+['raw data' ftp server](https://rawdata.oceanobservatories.org/files/).
+Here we find a large number (> 130) of sub-folders corresponding to different locations or resources of 
+the Ocean Observing Initiative program. We are concerned with only six of these, all located off the coast of Oregon state.
+For example the **Coastal Endurance - OR (Oregon) Offshore Cabled Benthic Experiment Package** corresponds to folder `CE04OSBP`. 
+Below is the key information for these six hydrophones: The site name followed by a link to the site webpage; and then
+the qualifiers needed to point at the raw data files. These qualifiers are appended to the base URL `https://rawdata.oceanobservatories.org/files/`. They are placed in the Python data loader script to 
+access data from a particular site and date.
+
+
+- Oregon Shelf Benthic Cabled Experiment Package, 80 meters depth
+([web page](https://oceanobservatories.org/site/ce02shbp/))
+  - CE02SHBP/ LJ01D/ 11-HYDBBA106/ 2015/ 09/ 03/
+- Endurance Offshore (distal continental shelf), 500 meters depth
+([web page](https://oceanobservatories.org/site/ce04osbp/))
+  - CE04OSBP/ LJ01C/ 11-HYDBBA105/ 2015/ 09/ 03/
+- Oregon Slope Base sea floor, 2900 meters depth
+([web page](https://oceanobservatories.org/site/rs01slbs/))
+  - RS01SLBS/ LJ01A/ 09-HYDBBA102/ 2015/ 09/ 03/ 
+- Oregon Slope Base shallow profiler mooring, 200 meters depth
+([web page](https://oceanobservatories.org/site/rs01sbps/))
+  - RS01SBPS/ PC01A/ 08-HYDBBA103/ 2015/ 09/ 03/
+- Axial Base Seafloor; 2600 meters 
+([web page](https://oceanobservatories.org/site/rs03axbs/))
+  - RS03AXBS/ LJ03A/ 09-HYDBBA302/ 2015/ 09/ 03/ 
+- Axial Base shallow profiler mooring, 200 meters depth (offline as of summer 2018) 
+([web page](https://oceanobservatories.org/site/rs03axps/))
+  - RS03AXPS/ PC03A/ 08-HYDBBA303/ 2015/ 09/ 03/
+
 
 ### Good megaptera days / sites
 
-- 2018-11-15T06:07:47Z    80meter
-- 2018-12-10T12:50:45Z    80meter
-- 2018-12-28T09:23:24Z    80meter
-- 2019-01-12T03:10:31Z    500meter   <--- very nice day
-- 2019-01-07T14:55:27Z    500meter
-- 2019-01-14T11:39:34Z    500meter
-- 2018-12-28T03:17:33Z    SlopeBase
+See **Data Manifest** below
+
+
+
+## Pay Serious Attention
+
+Ok this is important! This section is what you must read right now, and I really mean it. Why? 
+Because ***this is the stuff you forgot after two weeks spent doing other things***.
+Read through this to remind yourself...
+
+- This walk-through is really thorough so you are in good shape
+  - but it can always be improved
+- `conda activate whaledr` is an absolutely essential for the Python script to run
+  - if you run `screen` you issue `conda activate whaledr` *therein*
+    - Remember this walkthrough has useful notes on using `screen`
+  - if you reconstitute an AMI that *should* work but doesn't: Why is that? I'll give you a sec...
+    - Answer: Did you say `conda activate whaledr`? 
+- access keys
+  - keep them out of git repo directories; avoid wasting tens thousand dollars and days of your time
+  - keep keys in `creds.json` in your root directory; contents look like this with ***double*** quotes: 
+  
+```
+{ "key_id": "APIIJDHGUFK8TZKHCDIZ", "key_access" : "uUilebaksX9AaEa2WZYUCnXaZIUc87EgazsHdw45" }
+```
+
+  - use an S3 Browser (or something) to look in on your S3 bucket situation
+    - your access keys can be tested out in the process; perhaps you need to generate new ones
+    - you can clobber old datasets in preparation for generating new versions
 
 ## Overviews
 
@@ -53,72 +104,84 @@ to speed up the task.
 - Start an EC2 instance on AWS running Ubuntu
 - Configure a Python environment, processing code and AWS credentials
 - From a `screen` shell start the processing task; and wait for that to complete
-- Note the data contribution in this README
-- Post-process for app
+- Modify this README to reflect the current state of the output dataset: What's done?
+- Proceed to configure the app and so on (not covered here)
 
 ### Medium-resolution walkthrough
+
 
 Read this to get a fairly complete picture of all the steps. They are repeated once more in
 more detail in the following section.
 
 
 - Get an AWS account including user key pair credentials.
-- Log in to the AWS console and start a fairly powerful machine -- say one with 12 cores.
+- Log in to the AWS console and start a fairly powerful machine -- say one with 12 cores
   - We strongly urge you to use an Ubuntu (not an AWS Linux) image for this Virtual Machine
-  - Note that cores and vCPUs are not the same. Generally one core is equivalent to two vCPUs.
-  - Be sure to capture the Key file (file extension `.pem`) in order to `ssh` to this instance.
-- Install a `bash` shell on your own computer if one is not present
-- Use the bash shell to log in to the EC2 instance
-- Follow the directions below to install Miniconda and activate the `whaledr` Python environment
+  - Note that cores and vCPUs are not the same. Generally one core is equivalent to two vCPUs
+  - Be sure to own or generate the ssh key file `xxx.pem` so you can `ssh` or `sftp` to this instance
+- Install a `bash` shell on your own computer if needed; and run it
+  - log in to the EC2 instance
+  - Per details below: Install Miniconda and then install and activate the `whaledr` Python environment
+    - On this same EC2 instance clone this repository (`whalebooks`) and install dependencies
+      - This is done using the `requirements.txt` file found in the data loader Python script directory
+    - Issue `conda activate whaledr` to make the functional environment active
+  
+That's a good start. We now turn the corner to processing details. Your goal is to convert five-minute-duration
+seismic format `xxx.mseed` files into 10-second clips accompanied by spectrograms in an S3 bucket where the 
+broadband hydrophone source and date are captured in the directory-like structure of S3 object storage. Here we go.
 
 
-You now have a good start on this project. We now turn the corner to the processing details.
-
-
-- On this same EC2 instance clone this repository (`whalebooks`) and install the dependencies
-  - This is done using the `requirements.txt` file found in this repo
 - Configure a JSON credentials file in your home directory
   - This file includes both public and private keys and resides outside of any github repo folders
-- Start a Linux `screen` session so that you can leave the subsequent processing job running
-  - You invoke this by simply typing `screen` on the command line
-  - You are then *in* the screen shell; you leave using `ctrl + a + ctrl + d`
-  - You find a running screen session using `screen -ls`
+  - It can be configured on your own computer and transferred to the EC2 instance
+    - For example using `sftp -i xxx.pem ubuntu@12.34.56.78`
+- On the EC2 instance: Start a `screen` session 
+  - Thus you can leave the job running even if you are disconnected from the EC2
+  - Simply type `screen` on the command line
+    - You are then *in* the screen shell; leave using `ctrl + a + ctrl + d`
+    - You find a running screen session using `screen -ls`
     - This returns `There is a screen on: 5981.pts-0.ip-172-31-18-10   (Detached)`
   - You reconnect to this session using `screen 5981.pts-0.ip-172-31-18.10`
-- Edit the Python script `python whaledr_data_push_parallel.py` to reflect your data and EC2 instance size
-- Be sure to enter the day you are processing in the README.md notes of this repository
+- Within `screen` issue `conda activate whaledr`
+- Edit the `whaledr_data_push_parallel.py` to reflect your data and EC2 instance size
+- Run the script: `python whaledr_data_push_parallel.py`
+- Note the data you process in this `README.md` file (or somewhere stable)
+  - Your note should accurately reflect the metadata needed to re-create the results
+    - Date of the data
+    - Location of the hydrophone including location code
+    - Frequency range (e.g. 0-8khz displayed in the images)
+    - Time range (e.g. each sound clip is 10 seconds)
+
+
 
 ## Walkthrough
+
+This walk-through will make much more sense in relation to the previous section. I encourage you
+to read that first before proceeding.
+
 
 The script `whaledr_data_push_parallel.py` 
 selects one *day* of broadband hydrophone data resident on an OOI RCA Engineering 
 [Server](https://rawdata.oceanobservatories.org/files/CE02SHBP/LJ01D/11-HYDBBA106/)
-and pushes this in five-second pieces to an AWS S3 bucket (object storage on the public cloud). 
-Each five-second clip is represented by both an audio file and a spectrogram image file.
-This walkthrough covers all the steps needed to run this script on a Linux machine; 
-in fact an AWS EC2 instance (Virtual Machine) running Ubuntu Linux.
+and pushes this as short sound clips in `.wav` format to AWS S3 object storage. 
+Each clip is also represented by a spectrogram image file in `.jpg` format.
+This walkthrough covers running this script on an AWS EC2 instance (Virtual Machine) running Ubuntu Linux.
 
 
-On AWS the baseline **c5.4xlarge** EC2 instance processes a single day of broadband hydrophone
-data in five hours. The source data are 'seismic format' **.mseed** files spanning 5 minutes. 
-The output files are **.png** images and **.wav** sound files spanning 5 seconds; hence each
-**.mseed** file produces 12 x 5 x 2 = 120 output files.
-
-Setup parts 1 and 2 accomplish the following...
-
-* Install and update-to-latest a small version of Anaconda called 'Miniconda'
-* Create and activate a Python environment called *whaledr*
-* Clone this `whalebooks` repository and run pip install using `requirements.txt`
-  * This installs the proper versions of the necessary Python packages
+On AWS a **c5.4xlarge** EC2 instance processes a single day of broadband hydrophone
+data in five hours. The source data are seismic format `.mseed` files spanning 5 minutes. 
+The output files are `.png` images and `.wav` sound files spanning a few seconds (as of
+April 2019: 10 seconds). Hence each `.mseed` file produces 6 x 5 x 2 = 60 output files.
+There are 720 files required to span an hour; or 17,280 files per day if the source record is 
+uninterrupted.
 
 
 ### Environment setup part 1
 
 - Start an AWS EC2 instance running Ubuntu Linux
-  - Be sure to store the access key file (`xxxx.pem`) on your local machine away from all GitHub repo folders
-- Once the machine has started: Log in and run the following commands
-  - Do not run them as a block; rather run each command only after the prior one has finished running
-  - Some commands require you to confirm a sub-action. It is safe to respond `yes` to all the prompts.
+  - Be sure to store the access key file (`xxxx.pem`) on your local machine outside of any and all GitHub repo folders
+- Log in and run the following commands individually (i.e. not as a block; some are interactive)
+  - It is safe to respond `yes` to all prompts
 
 
 ```
@@ -130,7 +193,8 @@ conda create -n whaledr python=3.6
 conda activate whaledr
 ```
 
-You should now be operating in the *whaledr* Python environment 
+You should now be operating in the *whaledr* Python environment. However if you use the `screen` command 
+(see below) you will have to re-run `conda activate whaledr` inside the screen shell.
 
 
 ### Environment setup part 2
@@ -144,23 +208,29 @@ cd whalebooks/shiv/whale_spectogram/
 pip install -r requirements.txt
 ```
 
-The above script summarized: 
+This provides you with the necessary package *within* your `whaledr` Python environment. That is: 
+Doing the package install with `whaledr` activated makes those packages *stick* to the `whaledr`
+environment. 
 
 
 ### Credential setup
 
-Before you can run ```whaledr_data_push_parallel.py``` you must install a credential file for AWS S3 access.
+Install a credential file for AWS S3 access.
 This can be done using the following Python script; or by directly editing the file `creds.json` in your
 home directory. 
 
 
 ***WARNING: If you manage to place your credentials file in a GitHub repo; and if those credentials find 
-their way onto the GitHub website: With near 100% certainty they will be found very quickly (by a bot) and used to 
-mine bitcoin at your expense. Typical cost to you over two hours will be 15,000 USD. The only way to
-fix this -- should it happen -- is to immediately Delete your access keys on the AWS console. Deleting 
-them from GitHub will not work as GitHub will keep the old credentials as part of version control. Delete
-the keys and then generate new keys and start over.***
+their way onto the GitHub website: With 100% certainty they will be found by a bot in minutes and used to 
+mine bitcoin at your expense. Over the next two hours this will run you 15,000 US dollars. The only way to
+fix the situation -- should it happen -- is to immediately Delete your access keys on the AWS console and
+shut down all of the offending instances. If you think that deleting keys from GitHub is sufficient you 
+will be surprised (as GitHub is about version control) that the bots will find the keys in a previous
+version of your repo and proceed as above. You must delete the access keys at AWS so that they are no longer
+usable. Generating new keys (that you keep out of GitHub) is easy and just takes a couple of minutes.***
 
+
+flag remainder of this section needs review
 
 Credential builder script follows; follow these steps from the home directory of your Ubuntu EC2 instance.
 
@@ -192,30 +262,40 @@ with open(os.path.join(home,'creds.json'), 'a') as cred:
 
 ### Configure the data processing script
 
-Edit the Python script `python whaledr_data_push_parallel.py` making two changes 
+Modify the Python script `whaledr_data_push_parallel.py` as follows
 
-- The following line contains year, month and day strings at the extreme right: 
+- `bucket_name` should reflect the correct destination S3 bucket
+- `folder_name` should reflect the proper folder within that bucket
+  - subfolders will be created to break out a hydrophone ID and the date of the processed data 
+- `mainurl` should reflect hydrophone choice plus year-month-day you wish to process
+- `nCores` is an integer that should reflect the number of cores on your processing machine
 
 ```
-mainurl = 'https://rawdata.oceanobservatories.org/files/CE02SHBP/LJ01D/11-HYDBBA106/2017/10/09/'
+    bucket_name = 'whaledr'
+    folder_name = 'megaptera'
+    .
+    .
+    .
+    mainurl = 'https://rawdata.oceanobservatories.org/files/CE04OSBP/LJ01C/11-HYDBBA105/2019/01/14/'
+    .
+    .
+    .
+    
+    try:
+        nCores = 12
 ``` 
 
-Modify the date in this string to reflect the desired day to process.
-
-- The following line of the script contains the number `12` which reflect the number of **cores** (not vCPUs) 
-on the EC2 instance. Modify this if necessary to match the number of cores on the instance you are using.
-- Example: The c5n.xlarge EC2 instance has 4 vCPUs and therefore 2 cores. `12` becomes `2` in the following:
+The number of cores on an EC2 instance is typically half the number of virtual CPUs or vCPUs. For example
+the c5n.xlarge EC2 instance has 4 vCPUs and therefore 2 cores so the script would read
 
 ```
-        pool = Pool(12)                         # Create a multiprocessing Pool
+        nCores = 2
 ```
-
-**Note** that the script writes to an S3 bucket named `himatdata/whaledr_renamed`. 
-Make sure your script is writing to the S3 location you intend.
 
 
 ### Run the script
 
+flag from here down needs review
 
 Since the script will require a number of hours to run it is simplest to start it as a background job. 
 This can be done for example using `nohup` but we suggest using the Linux `screen` utility. This is 
@@ -246,16 +326,15 @@ this being 24 hours x 60 minutes x 12 5-second intervals per minute x 2 file typ
 
 - whaledr bucket
   - megaptera folder
-    - 500 meter Endurance array hydrophone
-      - January 12 2019
-    - Oregon slope base hydrophone
-      - October 6 2017
-
-- himatdata bucket
-  - whaledr_renamed folder
-    - Oregon slope base hydrophone
-      - 2017 October 03, 04, 05
-      - 2017 October 07 (partial), 08, 09, 10, 11, 12, 13, 17
+    - 500 m Endurance Offshore January 12 2019: Partially complete
+    - 500 m Endurance Offshore January 14 2019: Partially complete
+    - Needed: 
+      - Oregon slope base October 6 2017
+      - 80 meter Cabled Endurance benthic 2018-11-15
+      - 80 meter Cabled Endurance benthic 2018-12-10 (12:50)
+      - 80 meter Cabled Endurance benthic 2018-12-28 (9:23)
+      - 500 m Endurance Offshore 2019-01-07 (14:00)
+      - Oregon slope base 2018-12-28 (03:00)
 
 
 ## Post-processing
